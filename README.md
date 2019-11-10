@@ -16,4 +16,4 @@ Submitted:  '04 November 2019'
 
 Input: 'Webscraped time series data for Crypto Currencies and SP500 constituents'
 
-Output:  'Corr_Heatmap_Crypto_sorted.png, Corr_Heatmap_Crypto_unsorted.png, Corr_Heatmap_SP500_15_sorted.png, Corr_Heatmap_SP500_unsorted.png, Corr_Network_Crypto_unsorted.png, Dendogram_Crypto.png, Dendogram_SP500.png, Index_crypto.png, Index_SP500_00_30.png, Index_SP500_00_90.png, Index_SP500_00_180.png, Index_SP500_00_360.png, Index_SP500_15_90.png'
+Output:  'Corr_Heatmap_Crypto_sorted.png, Corr_Heatmap_Crypto_unsorted.png, Corr_Heatmap_Mixed_sorted.png, Corr_Heatmap_Mixed_unsorted.png, Corr_Heatmap_SP500_15_sorted.png, Corr_Heatmap_SP500_unsorted.png, Corr_Network_Crypto_unsorted.png, Dendogram_Crypto.png, Dendogram_Mixed.png Dendogram_SP500.png, Index_crypto.png, Index_Mixed_16_30.png, Index_Mixed_16_90.png, Index_Mixed_16_180.png, Index_Mixed_16_360.png, Index_SP500_00_30.png, Index_SP500_00_90.png, Index_SP500_00_180.png, Index_SP500_00_360.png, Index_SP500_15_90.png'
