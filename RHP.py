@@ -3,9 +3,10 @@
 """
 Created on Wed Oct 30 17:22:20 2019
 This file implements the RHP algorithm and the MinVAr portfolio.
-Code is based on Lopez de Prado, M. (2018). Advances in Financial 
-Machine Learning. Wiley. and Bailey, D. & Lopez de Prado, M. (2013). 
-The code has been adapted in order to be used with the data set of the analysis
+Code for HRP is based on Lopez de Prado, M. (2018). Advances in Financial 
+Machine Learning. Wiley. 
+The code has been adapted in order to be used with python 3 and the data set
+of the analysis.
 @author: julianwossner
 """
 import os
@@ -13,33 +14,29 @@ path = os.getcwd() # Set Working directory here
 
 # Import modules for Datastructuring and calc.
 import pandas as pd
-import datetime
 import numpy as np
 from scipy import stats
+import warnings
+from tqdm import tqdm
 
 # Modules for RHP algorithm
 import matplotlib.pyplot as mpl
 import scipy.cluster.hierarchy as sch
-import random
 
 
 # Modules for the network plot
-import seaborn as sns
 import networkx as nx
 from networkx.convert_matrix import from_numpy_matrix
 from networkx.algorithms.centrality import degree_centrality, in_degree_centrality, out_degree_centrality, eigenvector_centrality, katz_centrality, closeness_centrality, betweenness_centrality 
 
-# Module for Latex output
-#!pip intall tabulate
-from tabulate import tabulate
 
 # Modules for Markowitz optimization
 import cvxopt as opt
 import cvxopt.solvers as optsolvers
-import warnings
 
 
 
+warnings.filterwarnings("ignore") # suppress warnings in clustering
 
 # The code below specifies the functions used for the 
 # HRP portfolio allocation and plotting the corr matrix
@@ -338,6 +335,7 @@ def Backtest_Crypto(returns, rebal = 22): # rebal = 22 default rebalancing after
     nrows = len(returns.index)-rebal # Number of iterations without first set to train
     rets_train = returns[:rebal]
     
+    
     cov,corr = rets_train.cov(), rets_train.corr()
     w_HRP=np.array([HRPportf(cov,corr).index,HRPportf(cov,corr)])
     w_HRP=pd.DataFrame(np.transpose(w_HRP))
@@ -358,7 +356,8 @@ def Backtest_Crypto(returns, rebal = 22): # rebal = 22 default rebalancing after
 
     portf_return = pd.DataFrame(columns=["MinVar","IVP","HRP"], index = range(nrows))
     
-    for i in range(rebal,nrows+rebal):
+    for i in tqdm(range(rebal,nrows+rebal)):
+    
             if i>rebal and i<nrows-rebal and i % rebal == 0: # Check for rebalancing date
                 rets_train = returns[i-rebal:i]
                 cov,corr = rets_train.cov(), rets_train.corr()
@@ -386,6 +385,7 @@ def Backtest_Crypto(returns, rebal = 22): # rebal = 22 default rebalancing after
                     weights = Weights[:,1].reshape(len(returns.columns),1).ravel(), axis = 1)
             portf_return["HRP"][i-int(rebal):i-int(rebal)+1]=np.average(returns[i:i+1].to_numpy(),\
                     weights = Weights[:,2].reshape(len(returns.columns),1).ravel(), axis = 1)
+           
             
     return portf_return
 
@@ -501,8 +501,8 @@ def Backtest_SP500(returns, rebal = 22): # rebal = 22 default rebalancing after 
 
     portf_return = pd.DataFrame(columns=["MinVar","IVP","HRP"], index = range(nrows))
     
-    for i in range(rebal,nrows+rebal):
-        
+    for i in tqdm(range(rebal,nrows+rebal)):
+           
         
             if i>rebal and i<nrows-rebal and i % rebal == 0: # Check for rebalancing date
                 rets_train = returns[i-rebal:i]
@@ -767,5 +767,227 @@ Perf_figures = pd.DataFrame([[mean_MinVar, mean_IVP,mean_HRP], [std_MinVar, \
 
 print(Perf_figures.to_latex(index=True)) # Latex table output
 
+
+
+# -----------------------------------------------------------------------------
+# Create Mixed portfolios with stocks and crypto
+
+SP500 = pd.read_csv("SP500_price_data_00.csv") #load csv
+SP500 = SP500.drop(["AAL","AAP","ABBV","ACN","ADS","AIZ",\
+                                        "ALGN","ALLE","AMCR","AMP","ANET","ANTM"\
+                                        ,"APTV","AVGO","AWK","BF.B","BKR","BR",\
+                                        "BRK.B","CBOE","CBRE","CBS","CDW","CE",\
+                                        "CFG","CHTR","CME","CMG"	,"CNC","COTY",\
+                                        "CPRI","CTVA","CXO"	,"DAL","DFS","DG", \
+                                        "DISCA", "DISCK","DLR","DOW","EQIX",\
+                                        "EW","EXPE","EXR","FANG","FB","FBHS",\
+                                        "FLT","FOX","FOXA","FRC","FTI","FTNT",\
+                                        "FTV","GM","GOOG","GOOGL","GPN","GRMN",\
+                                        "HBI","HCA","HII","HLT","HPE","ICE",\
+                                        "ILMN","INFO","IPGP","IQV","ISRG",\
+                                        "KEYS","KMI","LDOS","LKQ","LVS","LW",\
+                                        "MA","MDLZ","MET","MKTX","MPC","MSCI",\
+                                        "NCLH", "NDAQ","NFLX", "NLSN","NRG",\
+                                        "NWSA", "PFG", "PKG"	,"PM","PRU","PSX",\
+                                        "PYPL","QRVO","STX","SYF","TDG","TEL",\
+                                        "TMUS","TPR","TRIP",	"TWTR","UA","UAA",\
+                                        "UAL","ULTA","V","VIAB","VRSK","WCG",\
+                                        "WLTW","WRK"	, "WU",	"WYNN","XEC"	,"XYL",\
+                                        "ZBH","ZTS","CF","CRM","FIS","KHC","LYB",\
+                                        "NWS"], axis=1)
+
+SP500 = SP500.set_index("Date")
+SP500_sample = SP500.sample(10,axis = 1,random_state=1) # randomly select 10 stocks from SP500
+
+Price_data_univ2 = pd.merge(SP500_sample, Crypto, on='Date', how='inner')#rename column
+Price_data_univ2 = Price_data_univ2.set_index("Date") # define Date  as index
+
+
+# Calculating returns and deleting columns that contain 0
+Return_data_univ2 = Price_data_univ2.pct_change() #calculate daily returns
+Return_data_univ2 = Return_data_univ2.drop(Return_data_univ2.index[range(0,1)])
+
+
+# Calculating covariance matrix
+Cov_mat2 = Return_data_univ2.cov() # Covariance matrix of the return matrix
+Corr_mat2=Return_data_univ2.corr() # Correlation matrix of the return matrix
+
+#------------------------------------------------------------------------------
+# Plotting Correlation matrix heatmap
+plotCorrMatrix(path+"/Corr_Heatmap_Mixed_unsorted",Corr_mat2)
+
+#------------------------------------------------------------------------------
+
+# Sort correlation matrix
+dist=correlDist(Corr_mat2)
+link=sch.linkage(dist,'single')
+sortIx=getQuasiDiag(link) 
+sortIx=Corr_mat2.index[sortIx].tolist() # recover labels 
+Corr_sorted2=Corr_mat2.loc[sortIx,sortIx] # reorder
+
+# Plot sorted correlation matrix
+plotCorrMatrix(path+"/Corr_Heatmap_Mixed_sorted",Corr_sorted2)
+
+#------------------------------------------------------------------------------
+# Plot dendogram of the constituents
+# Cluster Data
+mpl.figure(num=None, figsize=(20, 10), dpi=300, facecolor='w', edgecolor='k')    
+dn = sch.dendrogram(link, labels = dist.columns)
+mpl.savefig(path+"/Dendrogram_Mixed.png", transparent = True, dpi = 300)
+mpl.clf();mpl.close() # reset pylab
+
+
+#------------------------------------------------------------------------------
+
+# Calculate the backtested portfolio returns
+# Changing the rebalancing frequency
+
+portf_rets_30 = Backtest_SP500(Return_data_univ2, rebal=30) # Monthly
+portf_rets_30_2 = 1+portf_rets_30
+portf_rets_180 = Backtest_SP500(Return_data_univ2, rebal=180) # half-year
+portf_rets_180_2 = 1+portf_rets_180
+portf_rets_360 = Backtest_SP500(Return_data_univ2, rebal=360) # yearly
+portf_rets_360_2 = 1+portf_rets_360
+portf_rets_90 = Backtest_SP500(Return_data_univ2, rebal=90) # Monthly
+portf_rets_90_2 = 1+portf_rets_90
+
+#Print indices-----------------------------------------------------------------
+rebal = 30
+# Calculate index
+portf_index = pd.DataFrame(columns=["MinVar","IVP","HRP"], \
+                           index = Return_data_univ2.index)[rebal:]
+portf_index[0:1] = 100
+for i in range(1,len(portf_index.index)):
+    portf_index["MinVar"][i:i+1] = float(portf_index["MinVar"][i-1:i]) * float(portf_rets_30_2["MinVar"][i-1:i])
+    portf_index["IVP"][i:i+1] = float(portf_index["IVP"][i-1:i]) * float(portf_rets_30_2["IVP"][i-1:i])
+    portf_index["HRP"][i:i+1] = float(portf_index["HRP"][i-1:i]) * float(portf_rets_30_2["HRP"][i-1:i])
+
+index = portf_index.plot.line()
+mpl.savefig(path+"/Index_Mixed_16_30.png", transparent = True, dpi = 300)
+
+
+rebal = 180
+# Calculate index
+portf_index = pd.DataFrame(columns=["MinVar","IVP","HRP"], \
+                           index = Return_data_univ2.index)[rebal:]
+portf_index[0:1] = 100
+for i in range(1,len(portf_index.index)):
+    portf_index["MinVar"][i:i+1] = float(portf_index["MinVar"][i-1:i]) * float(portf_rets_180_2["MinVar"][i-1:i])
+    portf_index["IVP"][i:i+1] = float(portf_index["IVP"][i-1:i]) * float(portf_rets_180_2["IVP"][i-1:i])
+    portf_index["HRP"][i:i+1] = float(portf_index["HRP"][i-1:i]) * float(portf_rets_180_2["HRP"][i-1:i])
+
+index = portf_index.plot.line()
+mpl.savefig(path+"/Index_Mixed_16_180.png", transparent = True, dpi = 300)
+
+rebal = 360
+# Calculate index
+portf_index = pd.DataFrame(columns=["MinVar","IVP","HRP"], \
+                           index = Return_data_univ2.index)[rebal:]
+portf_index[0:1] = 100
+for i in range(1,len(portf_index.index)):
+    portf_index["MinVar"][i:i+1] = float(portf_index["MinVar"][i-1:i]) * float(portf_rets_360_2["MinVar"][i-1:i])
+    portf_index["IVP"][i:i+1] = float(portf_index["IVP"][i-1:i]) * float(portf_rets_360_2["IVP"][i-1:i])
+    portf_index["HRP"][i:i+1] = float(portf_index["HRP"][i-1:i]) * float(portf_rets_360_2["HRP"][i-1:i])
+
+index = portf_index.plot.line()
+mpl.savefig(path+"/Index_Mixed_16_360.png", transparent = True, dpi = 300)
+
+rebal = 90
+# Calculate index
+portf_index = pd.DataFrame(columns=["MinVar","IVP","HRP"], \
+                           index = Return_data_univ2.index)[rebal:]
+portf_index[0:1] = 100
+for i in range(1,len(portf_index.index)):
+    portf_index["MinVar"][i:i+1] = float(portf_index["MinVar"][i-1:i]) * float(portf_rets_90_2["MinVar"][i-1:i])
+    portf_index["IVP"][i:i+1] = float(portf_index["IVP"][i-1:i]) * float(portf_rets_90_2["IVP"][i-1:i])
+    portf_index["HRP"][i:i+1] = float(portf_index["HRP"][i-1:i]) * float(portf_rets_90_2["HRP"][i-1:i])
+
+index = portf_index.plot.line()
+mpl.savefig(path+"/Index_Mixed_16_90.png", transparent = True, dpi = 300)
+
+
+# Calculate performance figures
+# Calculate portfolio return and portfolio variance
+# Daily average return
+mean_MinVar = stats.mstats.gmean(np.array(portf_rets_30_2["MinVar"], dtype=float))-1
+mean_IVP = stats.mstats.gmean(np.array(portf_rets_30_2["IVP"], dtype=float))-1
+mean_HRP = stats.mstats.gmean(np.array(portf_rets_30_2["HRP"], dtype=float))-1
+# Daily Standard deviation
+std_MinVar = portf_rets_30["MinVar"].std()
+std_IVP = portf_rets_30["IVP"].std()
+std_HRP = portf_rets_30["HRP"].std()
+# Sharpe ratios
+SR_MinVar = mean_MinVar/std_MinVar
+SR_IVP = mean_IVP/std_IVP
+SR_HRP = mean_HRP/std_HRP
+
+Perf_figures = pd.DataFrame([[mean_MinVar, mean_IVP,mean_HRP], [std_MinVar, \
+                            std_IVP, std_HRP],[SR_MinVar,SR_IVP,SR_HRP]], \
+    index =['Mean', 'Std', 'SR'], columns = ["MinVar","IVP","HRP"])
+
+print(Perf_figures.to_latex(index=True)) # Latex table output
+
+# Calculate performance figures
+# Calculate portfolio return and portfolio variance
+# Daily average return
+mean_MinVar = stats.mstats.gmean(np.array(portf_rets_180_2["MinVar"], dtype=float))-1
+mean_IVP = stats.mstats.gmean(np.array(portf_rets_180_2["IVP"], dtype=float))-1
+mean_HRP = stats.mstats.gmean(np.array(portf_rets_180_2["HRP"], dtype=float))-1
+# Daily Standard deviation
+std_MinVar = portf_rets_180["MinVar"].std()
+std_IVP = portf_rets_180["IVP"].std()
+std_HRP = portf_rets_180["HRP"].std()
+# Sharpe ratios
+SR_MinVar = mean_MinVar/std_MinVar
+SR_IVP = mean_IVP/std_IVP
+SR_HRP = mean_HRP/std_HRP
+
+Perf_figures = pd.DataFrame([[mean_MinVar, mean_IVP,mean_HRP], [std_MinVar, \
+                            std_IVP, std_HRP],[SR_MinVar,SR_IVP,SR_HRP]], \
+    index =['Mean', 'Std', 'SR'], columns = ["MinVar","IVP","HRP"])
+
+print(Perf_figures.to_latex(index=True)) # Latex table output
+
+# Calculate performance figures
+# Calculate portfolio return and portfolio variance
+# Daily average return
+mean_MinVar = stats.mstats.gmean(np.array(portf_rets_360_2["MinVar"], dtype=float))-1
+mean_IVP = stats.mstats.gmean(np.array(portf_rets_360_2["IVP"], dtype=float))-1
+mean_HRP = stats.mstats.gmean(np.array(portf_rets_360_2["HRP"], dtype=float))-1
+# Daily Standard deviation
+std_MinVar = portf_rets_360["MinVar"].std()
+std_IVP = portf_rets_360["IVP"].std()
+std_HRP = portf_rets_360["HRP"].std()
+# Sharpe ratios
+SR_MinVar = mean_MinVar/std_MinVar
+SR_IVP = mean_IVP/std_IVP
+SR_HRP = mean_HRP/std_HRP
+
+Perf_figures = pd.DataFrame([[mean_MinVar, mean_IVP,mean_HRP], [std_MinVar, \
+                            std_IVP, std_HRP],[SR_MinVar,SR_IVP,SR_HRP]], \
+    index =['Mean', 'Std', 'SR'], columns = ["MinVar","IVP","HRP"])
+
+print(Perf_figures.to_latex(index=True)) # Latex table output
+
+# Calculate performance figures
+# Calculate portfolio return and portfolio variance
+# Daily average return
+mean_MinVar = stats.mstats.gmean(np.array(portf_rets_90_2["MinVar"], dtype=float))-1
+mean_IVP = stats.mstats.gmean(np.array(portf_rets_90_2["IVP"], dtype=float))-1
+mean_HRP = stats.mstats.gmean(np.array(portf_rets_90_2["HRP"], dtype=float))-1
+# Daily Standard deviation
+std_MinVar = portf_rets_90["MinVar"].std()
+std_IVP = portf_rets_90["IVP"].std()
+std_HRP = portf_rets_90["HRP"].std()
+# Sharpe ratios
+SR_MinVar = mean_MinVar/std_MinVar
+SR_IVP = mean_IVP/std_IVP
+SR_HRP = mean_HRP/std_HRP
+
+Perf_figures = pd.DataFrame([[mean_MinVar, mean_IVP,mean_HRP], [std_MinVar, \
+                            std_IVP, std_HRP],[SR_MinVar,SR_IVP,SR_HRP]], \
+    index =['Mean', 'Std', 'SR'], columns = ["MinVar","IVP","HRP"])
+
+print(Perf_figures.to_latex(index=True)) # Latex table output
 
 
