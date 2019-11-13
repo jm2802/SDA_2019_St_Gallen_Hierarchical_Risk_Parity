@@ -12,7 +12,7 @@ Author: 'Julian Woessner'
 
 See also: 'SDA_2019_St_Gallen_Webscraping_Timeseries'
 
-Submitted:  '04 November 2019'
+Submitted:  '13 November 2019'
 
 Input: 'Webscraped time series data for Crypto Currencies and SP500 constituents'
 
